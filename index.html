@@ -25,23 +25,23 @@
   <h2>🧾 夏令營教師時數互動表</h2>
   <label>👤 使用者名稱：<input type="text" id="user" placeholder="輸入名稱"></label>
   <button id="downloadBtn" onclick="downloadExcel()">📥 強制下載時間表 Excel</button>
-
   <div id="personSwitch"></div>
-
+  <div>
+    <button onclick="switchToScheduleGrid()">🗓️ 以週/星期切換座標日程</button>
+  </div>
+  <div id="scheduleGridContainer"></div>
   <table>
     <thead>
       <tr><th>教師</th><th>日期</th><th>時段</th><th>時數</th><th>最後編輯者</th></tr>
     </thead>
     <tbody id="tableBody"></tbody>
   </table>
-
   <div class="section">
     <h3>💬 即時聊天留言板</h3>
     <div class="chat-box" id="chatBox"></div>
     <input type="text" id="chatInput" placeholder="輸入訊息...">
     <button onclick="postMessage()">送出</button>
   </div>
-
   <script>
     const fullData = [
       { teacher: "Tr亮", date: "2025-07-07", slot: "9:30~11:45", hours: 2.25, editedBy: "" },
@@ -52,11 +52,11 @@
     ];
 
     let currentData = [...fullData];
-
     const user = document.getElementById("user");
     const tbody = document.getElementById("tableBody");
     const chatBox = document.getElementById("chatBox");
     const personSwitch = document.getElementById("personSwitch");
+    const scheduleGridContainer = document.getElementById("scheduleGridContainer");
 
     function renderPersonButtons() {
       const people = [...new Set(fullData.map(d => d.teacher))];
@@ -77,6 +77,7 @@
 
     function render() {
       tbody.innerHTML = "";
+      scheduleGridContainer.innerHTML = "";
       currentData.forEach((row, i) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -84,54 +85,21 @@
           <td><input type="text" value="${row.date}" onchange="update(${i}, 'date', this.value)" title="最後編輯：${row.editedBy || '尚無'}"></td>
           <td><input type="text" value="${row.slot}" onchange="update(${i}, 'slot', this.value)" title="最後編輯：${row.editedBy || '尚無'}"></td>
           <td><input type="number" value="${row.hours}" step="0.25" onchange="update(${i}, 'hours', this.value)" title="最後編輯：${row.editedBy || '尚無'}"></td>
-          <td>${row.editedBy}</td>
-        `;
+          <td>${row.editedBy}</td>`;
         tbody.appendChild(tr);
       });
     }
 
-    function update(index, field, value) {
-      const realIndex = fullData.findIndex(r => r === currentData[index]);
-      fullData[realIndex][field] = value;
-      fullData[realIndex].editedBy = user.value || "匿名";
-      render();
-    }
-
-    function postMessage() {
-      const input = document.getElementById("chatInput");
-      const name = user.value || "匿名";
-      const msg = input.value.trim();
-      if (msg) {
-        const div = document.createElement("div");
-        div.className = "chat-msg";
-        div.textContent = `👤 ${name}：${msg}`;
-        chatBox.appendChild(div);
-        input.value = "";
-        chatBox.scrollTop = chatBox.scrollHeight;
-      }
-    }
-
-    function downloadExcel() {
-      const wb = XLSX.utils.book_new();
-      const sheetData = fullData.map(row => ({
-        教師: row.teacher,
-        日期: row.date,
-        時段: row.slot,
-        時數: row.hours,
-        最後編輯者: row.editedBy || ""
-      }));
-      const ws = XLSX.utils.json_to_sheet(sheetData);
-      XLSX.utils.book_append_sheet(wb, ws, "時間表");
-
-      const name = user.value || "匿名";
-      const now = new Date().toISOString().slice(0,16).replace(/[:T]/g, '-');
-      const fileName = `時間-${name}-${now}.xlsx`;
-
-      XLSX.writeFile(wb, fileName);
-    }
-
-    renderPersonButtons();
-    render();
-  </script>
-</body>
-</html>
+    function switchToScheduleGrid() {
+      const grid = {};
+      fullData.forEach(entry => {
+        const d = new Date(entry.date);
+        const week = Math.ceil((d.getDate() - d.getDay() + 1) / 7);
+        const day = ["日","一","二","三","四","五","六"][d.getDay()];
+        const key = `第${week}週-${day}`;
+        if (!grid[key]) grid[key] = [];
+        grid[key].push(entry.teacher);
+      });
+      const keys = Object.keys(grid);
+      scheduleGridContainer.innerHTML = '<h3>📆 週／星期 人員日程表</h3><table><thead><tr><th>週-星期</th><th>人員</th></tr></thead><tbody>' +
+        keys.map(k => `<tr><td>${k}</td><td>${grid[k
