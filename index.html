@@ -1,25 +1,33 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>簡易教師時數表</title>
+  <title>夏令營時數互動表</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f7f7f7; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1em; background: white; }
+    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
+    table { border-collapse: collapse; width: 100%; background: #fff; margin-top: 1em; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
-    th { background-color: #eee; }
-    input[type="text"], input[type="number"] {
-      width: 100%; border: none; text-align: center; background: transparent;
-    }
+    th { background: #eee; }
+    input[type="text"], input[type="number"] { width: 100%; border: none; text-align: center; background: transparent; }
     input:hover { background-color: #ffffe0; }
-    #user { width: 200px; padding: 6px; }
+    #user { width: 200px; padding: 6px; margin-bottom: 10px; }
+    .section { margin-top: 40px; background: white; padding: 16px; border-radius: 8px; box-shadow: 0 0 5px #ccc; }
+    .chat-box { height: 200px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; background: #fafafa; margin-bottom: 10px; }
+    .chat-msg { margin: 4px 0; }
+    #downloadBtn { margin-top: 20px; padding: 8px 16px; font-size: 1em; }
+    .person-button { margin: 4px; padding: 4px 12px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+    .person-button:hover { background: #e0f0ff; }
   </style>
 </head>
 <body>
   <h2>🧾 夏令營教師時數互動表</h2>
   <label>👤 使用者名稱：<input type="text" id="user" placeholder="輸入名稱"></label>
+  <button id="downloadBtn" onclick="downloadExcel()">📥 強制下載時間表 Excel</button>
+
+  <div id="personSwitch"></div>
+
   <table>
     <thead>
       <tr><th>教師</th><th>日期</th><th>時段</th><th>時數</th><th>最後編輯者</th></tr>
@@ -27,19 +35,49 @@
     <tbody id="tableBody"></tbody>
   </table>
 
+  <div class="section">
+    <h3>💬 即時聊天留言板</h3>
+    <div class="chat-box" id="chatBox"></div>
+    <input type="text" id="chatInput" placeholder="輸入訊息...">
+    <button onclick="postMessage()">送出</button>
+  </div>
+
   <script>
-    const data = [
+    const fullData = [
       { teacher: "Tr亮", date: "2025-07-07", slot: "9:30~11:45", hours: 2.25, editedBy: "" },
       { teacher: "Tr羽", date: "2025-07-07", slot: "9:30~11:45", hours: 2.25, editedBy: "" },
       { teacher: "TrCY", date: "2025-07-07", slot: "14:00~15:00", hours: 1, editedBy: "" },
+      { teacher: "TrAnn", date: "2025-07-08", slot: "09:00~11:00", hours: 2, editedBy: "" },
+      { teacher: "Tr李", date: "2025-07-08", slot: "13:00~14:00", hours: 1, editedBy: "" }
     ];
+
+    let currentData = [...fullData];
 
     const user = document.getElementById("user");
     const tbody = document.getElementById("tableBody");
+    const chatBox = document.getElementById("chatBox");
+    const personSwitch = document.getElementById("personSwitch");
+
+    function renderPersonButtons() {
+      const people = [...new Set(fullData.map(d => d.teacher))];
+      personSwitch.innerHTML = '<strong>切換視圖：</strong>' +
+        '<button class="person-button" onclick="switchToAll()">📋 總日程</button>' +
+        people.map(p => `<button class="person-button" onclick="switchToPerson('${p}')">${p}</button>`).join(' ');
+    }
+
+    function switchToAll() {
+      currentData = [...fullData];
+      render();
+    }
+
+    function switchToPerson(name) {
+      currentData = fullData.filter(r => r.teacher === name);
+      render();
+    }
 
     function render() {
       tbody.innerHTML = "";
-      data.forEach((row, i) => {
+      currentData.forEach((row, i) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${row.teacher}</td>
@@ -53,11 +91,46 @@
     }
 
     function update(index, field, value) {
-      data[index][field] = value;
-      data[index].editedBy = user.value || "匿名";
+      const realIndex = fullData.findIndex(r => r === currentData[index]);
+      fullData[realIndex][field] = value;
+      fullData[realIndex].editedBy = user.value || "匿名";
       render();
     }
 
+    function postMessage() {
+      const input = document.getElementById("chatInput");
+      const name = user.value || "匿名";
+      const msg = input.value.trim();
+      if (msg) {
+        const div = document.createElement("div");
+        div.className = "chat-msg";
+        div.textContent = `👤 ${name}：${msg}`;
+        chatBox.appendChild(div);
+        input.value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
+
+    function downloadExcel() {
+      const wb = XLSX.utils.book_new();
+      const sheetData = fullData.map(row => ({
+        教師: row.teacher,
+        日期: row.date,
+        時段: row.slot,
+        時數: row.hours,
+        最後編輯者: row.editedBy || ""
+      }));
+      const ws = XLSX.utils.json_to_sheet(sheetData);
+      XLSX.utils.book_append_sheet(wb, ws, "時間表");
+
+      const name = user.value || "匿名";
+      const now = new Date().toISOString().slice(0,16).replace(/[:T]/g, '-');
+      const fileName = `時間-${name}-${now}.xlsx`;
+
+      XLSX.writeFile(wb, fileName);
+    }
+
+    renderPersonButtons();
     render();
   </script>
 </body>
