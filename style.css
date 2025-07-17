@@ -1,0 +1,5 @@
+
+body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+#chat-box { border: 1px solid #ccc; height: 300px; overflow-y: scroll; margin: 12px 0; padding: 8px; background: #fff; }
+.msg { padding: 6px; margin-bottom: 4px; border-radius: 6px; }
+.msg .time { font-size: 0.8em; color: #555; margin-left: 8px; }
