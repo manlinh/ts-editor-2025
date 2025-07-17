@@ -1,0 +1,64 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>簡易教師時數表</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f7f7f7; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; background: white; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #eee; }
+    input[type="text"], input[type="number"] {
+      width: 100%; border: none; text-align: center; background: transparent;
+    }
+    input:hover { background-color: #ffffe0; }
+    #user { width: 200px; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h2>🧾 夏令營教師時數互動表</h2>
+  <label>👤 使用者名稱：<input type="text" id="user" placeholder="輸入名稱"></label>
+  <table>
+    <thead>
+      <tr><th>教師</th><th>日期</th><th>時段</th><th>時數</th><th>最後編輯者</th></tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <script>
+    const data = [
+      { teacher: "Tr亮", date: "2025-07-07", slot: "9:30~11:45", hours: 2.25, editedBy: "" },
+      { teacher: "Tr羽", date: "2025-07-07", slot: "9:30~11:45", hours: 2.25, editedBy: "" },
+      { teacher: "TrCY", date: "2025-07-07", slot: "14:00~15:00", hours: 1, editedBy: "" },
+    ];
+
+    const user = document.getElementById("user");
+    const tbody = document.getElementById("tableBody");
+
+    function render() {
+      tbody.innerHTML = "";
+      data.forEach((row, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row.teacher}</td>
+          <td><input type="text" value="${row.date}" onchange="update(${i}, 'date', this.value)" title="最後編輯：${row.editedBy || '尚無'}"></td>
+          <td><input type="text" value="${row.slot}" onchange="update(${i}, 'slot', this.value)" title="最後編輯：${row.editedBy || '尚無'}"></td>
+          <td><input type="number" value="${row.hours}" step="0.25" onchange="update(${i}, 'hours', this.value)" title="最後編輯：${row.editedBy || '尚無'}"></td>
+          <td>${row.editedBy}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function update(index, field, value) {
+      data[index][field] = value;
+      data[index].editedBy = user.value || "匿名";
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>
